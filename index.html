@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rhetoric Arena — Study Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #14181c;
+    --ink-2: #1e252b;
+    --panel: #232b31;
+    --parchment: #ede3cf;
+    --parchment-dim: #cfc5ac;
+    --bronze: #b8894a;
+    --bronze-dim: #8a693a;
+    --crimson: #a24545;
+    --olive: #6f8a5c;
+    --line: #35414a;
+    --text-hi: #f4ede0;
+    --text-lo: #a9b3ba;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 20% -10%, #23282e 0%, transparent 45%),
+      radial-gradient(circle at 100% 10%, #1c2830 0%, transparent 40%),
+      var(--ink);
+    color: var(--text-hi);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 36px 20px 60px;
+  }
+
+  header.top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  h1.title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 30px;
+    letter-spacing: 0.2px;
+    margin: 0;
+    color: var(--parchment);
+  }
+
+  h1.title span {
+    color: var(--bronze);
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-lo);
+    margin-top: 4px;
+  }
+
+  nav.modes {
+    display: flex;
+    gap: 4px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px;
+  }
+
+  nav.modes button {
+    border: none;
+    background: transparent;
+    color: var(--text-lo);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
+  }
+
+  nav.modes button.active {
+    background: var(--bronze);
+    color: #1a1206;
+  }
+
+  nav.modes button:not(.active):hover {
+    color: var(--text-hi);
+  }
+
+  .stage {
+    background: linear-gradient(180deg, var(--panel), var(--ink-2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px;
+    min-height: 380px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stage::before {
+    content: "";
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(184,137,74,0.14), transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ---------- shared bits ---------- */
+
+  .statbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--text-lo);
+  }
+
+  .statbar .score { color: var(--bronze); font-weight: 600; }
+
+  .dots {
+    display: flex;
+    gap: 5px;
+  }
+  .dots i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--line);
+    display: inline-block;
+  }
+  .dots i.done { background: var(--bronze-dim); }
+  .dots i.now { background: var(--bronze); }
+
+  /* ---------- quiz mode ---------- */
+
+  .prompt-label {
+    font-size: 12px;
+    color: var(--bronze);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .prompt {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    line-height: 1.4;
+    color: var(--text-hi);
+    margin: 0 0 26px;
+    min-height: 78px;
+  }
+
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  @media (max-width: 520px) {
+    .options { grid-template-columns: 1fr; }
+  }
+
+  .opt {
+    text-align: left;
+    padding: 14px 16px;
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text-hi);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14.5px;
+    cursor: pointer;
+    transition: border-color .15s ease, transform .1s ease, background .15s ease;
+  }
+
+  .opt:hover:not(:disabled) {
+    border-color: var(--bronze-dim);
+    transform: translateY(-1px);
+  }
+
+  .opt:disabled { cursor: default; }
+
+  .opt.correct {
+    background: rgba(111,138,92,0.18);
+    border-color: var(--olive);
+    color: #d7e5cc;
+  }
+
+  .opt.wrong {
+    background: rgba(162,69,69,0.18);
+    border-color: var(--crimson);
+    color: #f0d3d3;
+  }
+
+  .opt.reveal {
+    border-color: var(--olive);
+  }
+
+  .feedback {
+    margin-top: 18px;
+    font-size: 13.5px;
+    color: var(--text-lo);
+    line-height: 1.5;
+    min-height: 20px;
+  }
+
+  .feedback strong { color: var(--parchment); }
+
+  .next-btn, .primary-btn {
+    margin-top: 20px;
+    background: var(--bronze);
+    color: #1a1206;
+    border: none;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
+  }
+
+  .next-btn.show, .primary-btn.show { display: inline-block; }
+
+  /* ---------- results ---------- */
+
+  .results h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    margin: 0 0 4px;
+    color: var(--parchment);
+  }
+  .results .big-score {
+    font-size: 46px;
+    font-family: 'Fraunces', serif;
+    color: var(--bronze);
+    margin: 10px 0 4px;
+  }
+  .results .missed {
+    margin-top: 22px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .missed-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+    color: var(--text-lo);
+  }
+  .missed-item strong { color: var(--parchment); }
+
+  /* ---------- flashcards ---------- */
+
+  .card3d {
+    perspective: 1200px;
+    height: 300px;
+  }
+  .card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform .5s cubic-bezier(.4,.2,.2,1);
+    transform-style: preserve-3d;
+    cursor: pointer;
+  }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .card-face.front {
+    background: var(--ink-2);
+    align-items: center;
+    text-align: center;
+  }
+  .card-face.front .num {
+    font-size: 12px; color: var(--text-lo); margin-bottom: 14px;
+  }
+  .card-face.front .term {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    color: var(--parchment);
+  }
+  .card-face.front .hint {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--bronze);
+  }
+  .card-face.back {
+    background: linear-gradient(180deg, #2a2118, #1c1712);
+    transform: rotateY(180deg);
+    overflow-y: auto;
+  }
+  .card-face.back dt {
+    font-size: 11px;
+    color: var(--bronze);
+    font-weight: 600;
+    margin-top: 10px;
+  }
+  .card-face.back dt:first-child { margin-top: 0; }
+  .card-face.back dd {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--parchment);
+    line-height: 1.45;
+  }
+
+  .deck-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+  }
+  .deck-controls .side-btns { display: flex; gap: 8px; }
+  .deck-controls button {
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    color: var(--text-hi);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .deck-controls button:hover { border-color: var(--bronze-dim); }
+  .deck-controls .counter { font-size: 13px; color: var(--text-lo); }
+
+  footer.hint {
+    text-align: center;
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--text-lo);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1 class="title">Rhetoric <span>Arena</span></h1>
+      <div class="subtitle">Allusions · Topics of invention · Rhetorical appeals · Sentence types</div>
+    </div>
+    <nav class="modes">
+      <button id="tab-study" class="active">Study</button>
+      <button id="tab-quiz">Quiz</button>
+    </nav>
+  </header>
+
+  <div class="stage" id="stage"></div>
+
+  <footer class="hint" id="foothint">Tap a card to flip it. Use the arrows to move through the deck.</footer>
+
+</div>
+
+<script>
+/* ============ DATA ============ */
+
+const TERMS = [
+  { name: "Plato", clue: "Founded the Academy in Athens and wrote dialogues that use his teacher as the main speaker.", origin: "Athens, Greece", date: "c. 428–348 BCE", extra: "Author of The Republic and the Allegory of the Cave; taught the theory of Forms." },
+  { name: "Aristotle", clue: "Tutored Alexander the Great and wrote the treatise that defined ethos, pathos, and logos.", origin: "Stagira, Macedon", date: "384–322 BCE", extra: "Founded the Lyceum; wrote Rhetoric, Poetics, and Nicomachean Ethics." },
+  { name: "Alexander the Great", clue: "Macedonian king who conquered the Persian Empire and spread Greek culture across the Near East.", origin: "Macedon (Pella)", date: "356–323 BCE", extra: "Tutored by Aristotle; founded Alexandria; wept for \"no more worlds to conquer.\"" },
+  { name: "Alamo", clue: "A small band of Texan defenders held this San Antonio mission against a much larger Mexican army in 1836.", origin: "Texas Revolution", date: "Feb–Mar 1836", extra: "Gave rise to the rallying cry \"Remember the Alamo!\"" },
+  { name: "Marxism", clue: "A theory of class struggle and revolution against capitalism, laid out in a Manifesto and Das Kapital.", origin: "Industrializing Germany", date: "Mid-19th century", extra: "Developed by Karl Marx and Friedrich Engels; became the basis of Soviet communism." },
+  { name: "Machiavelli", clue: "This Renaissance writer's name became an adjective for cunning, power-hungry political strategy.", origin: "Florence, Italy", date: "1469–1527", extra: "Wrote The Prince (1513), arguing rulers should prize effectiveness over conventional morality." },
+  { name: "Nihilism", clue: "The view that life has no inherent meaning, purpose, or value.", origin: "19th-century Europe (esp. Russia)", date: "19th century", extra: "Explored in Russian literature, notably Turgenev's Fathers and Sons." },
+  { name: "Manifest Destiny", clue: "The 19th-century belief that the U.S. was divinely destined to expand across the continent.", origin: "American political rhetoric", date: "1840s onward", extra: "Coined by journalist John O'Sullivan; used to justify westward expansion." },
+  { name: "Relativism", clue: "The view that truth and morality are relative to individual or cultural perspective, not absolute.", origin: "Greek sophism (Protagoras)", date: "Ancient Greece; revived in postmodern thought", extra: "\"Man is the measure of all things\" — Protagoras." },
+  { name: "Hedonism", clue: "The philosophy that pleasure is the highest good and the proper aim of life.", origin: "Ancient Greek philosophy", date: "4th–3rd century BCE", extra: "Epicurus's version actually emphasized moderation, not indulgence." },
+  { name: "Rubicon", clue: "The river Julius Caesar illegally crossed with his army, triggering civil war.", origin: "Roman Republic, northern Italy", date: "49 BCE", extra: "Gave us the idiom \"crossing the Rubicon\" and \"the die is cast.\"" },
+  { name: "Salem Witch Trials", clue: "Prosecutions of accused witches in colonial Massachusetts that led to about 20 executions.", origin: "Puritan Salem, Massachusetts", date: "1692–1693", extra: "Inspired Arthur Miller's The Crucible, an allegory for McCarthyism." },
+  { name: "McCarthyism", clue: "Making sweeping accusations of disloyalty without solid evidence, named for a Cold War senator.", origin: "Cold War United States", date: "Early 1950s", extra: "Fueled the Red Scare and the Hollywood blacklist." },
+  { name: "Thomas Paine", clue: "Wrote \"These are the times that try men's souls\" to rally demoralized troops.", origin: "Born in England, emigrated to the colonies", date: "1737–1809", extra: "Also wrote Common Sense (1776), a bestselling case for independence." },
+  { name: "Trail of Tears", clue: "The forced march of the Cherokee and other nations to Indian Territory, causing thousands of deaths.", origin: "U.S. federal Indian Removal policy", date: "1830s", extra: "Followed the Indian Removal Act of 1830 under Andrew Jackson." },
+  { name: "Crusades", clue: "Religious wars sanctioned by the Catholic Church to reclaim the Holy Land.", origin: "Medieval Europe, called by Pope Urban II", date: "11th–13th centuries", extra: "Shaped centuries of Christian–Muslim relations." },
+  { name: "Freud", clue: "Founder of psychoanalysis; theorized the id, ego, and superego.", origin: "Vienna, Austria", date: "1856–1939", extra: "Wrote The Interpretation of Dreams (1899)." },
+  { name: "Kant", clue: "Enlightenment philosopher behind the categorical imperative and duty-based ethics.", origin: "Königsberg, Prussia", date: "1724–1804", extra: "Wrote the notoriously difficult Critique of Pure Reason." },
+  { name: "Kierkegaard", clue: "Danish philosopher often called the father of existentialism, known for the \"leap of faith.\"", origin: "Copenhagen, Denmark", date: "1813–1855", extra: "Wrote Fear and Trembling; critiqued Hegelian systematic philosophy." }
+];
+
+const APPEALS = [
+  { name: "Ethos", clue: "\"As a decorated veteran, I understand the true cost of war.\" — which appeal is this?", extra: "Appeal to the speaker's credibility, expertise, or character." },
+  { name: "Pathos", clue: "Paine's The American Crisis, written to stir resolve in demoralized troops — which appeal is this?", extra: "Appeal to the audience's emotions: fear, pity, anger, hope." },
+  { name: "Logos", clue: "A step-by-step argument built on facts, statistics, and cause-and-effect reasoning — which appeal is this?", extra: "Appeal to logic and reason." },
+  { name: "Kairos", clue: "Paine published his pamphlet at the Continental Army's very lowest point — which appeal is this?", extra: "Appeal to the timeliness or occasion of the moment." }
+];
+
+const SENTENCES = [
+  { name: "Loose (Cumulative) Sentence", clue: "\"The defenders held the Alamo, fighting through the night, outnumbered ten to one.\" — which sentence type?", extra: "States the main clause first, then piles on modifying detail." },
+  { name: "Periodic Sentence", clue: "\"Outnumbered ten to one, fighting through the night, the defenders held the Alamo.\" — which sentence type?", extra: "Withholds the complete thought until the very end for suspense." },
+  { name: "Balanced Sentence", clue: "\"The Spartans knew how to die well; the Athenians knew how to live well.\" — which sentence type?", extra: "Parallel structure presenting two roughly equal, often contrasting, parts." }
+];
+
+const TOPICS = [
+  { name: "Definition", clue: "\"Courage is not the absence of fear but the willingness to act rightly in spite of it.\" — which topic of invention?", extra: "States what a thing essentially is." },
+  { name: "Comparison", clue: "\"Courage is a rarer virtue than diligence.\" — which topic of invention?", extra: "Relates the subject to something else by degree or likeness." },
+  { name: "Relationship", clue: "\"Because Alexander faced death fearlessly, his soldiers found courage to follow him.\" — which topic of invention?", extra: "Considers cause and effect, or contraries." },
+  { name: "Circumstance", clue: "\"It was possible for the defenders to retreat, yet they chose to stand and fight.\" — which topic of invention?", extra: "Weighs what is possible/impossible, past fact/future fact." },
+  { name: "Testimony", clue: "\"As Aristotle observed, courage is the mean between recklessness and cowardice.\" — which topic of invention?", extra: "Draws on authority, precedent, or maxims." }
+];
+
+/* ============ QUESTION POOL ============ */
+
+function buildPool() {
+  const pool = [];
+  TERMS.forEach(t => {
+    pool.push({ prompt: t.clue, answer: t.name, group: TERMS, label: "Allusions & Terms", note: `${t.origin} · ${t.date}` });
+  });
+  APPEALS.forEach(a => pool.push({ prompt: a.clue, answer: a.name, group: APPEALS, label: "Rhetorical Appeals", note: a.extra }));
+  SENTENCES.forEach(s => pool.push({ prompt: s.clue, answer: s.name, group: SENTENCES, label: "Sentence Types", note: s.extra }));
+  TOPICS.forEach(tp => pool.push({ prompt: tp.clue, answer: tp.name, group: TOPICS, label: "Topics of Invention", note: tp.extra }));
+  return pool;
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function makeQuestion(item) {
+  const names = item.group.map(x => x.name).filter(n => n !== item.answer);
+  const distractors = shuffle(names).slice(0, 3);
+  const options = shuffle([item.answer, ...distractors]);
+  return { prompt: item.prompt, answer: item.answer, options, label: item.label, note: item.note };
+}
+
+/* ============ STATE ============ */
+
+const stage = document.getElementById('stage');
+const foothint = document.getElementById('foothint');
+const tabStudy = document.getElementById('tab-study');
+const tabQuiz = document.getElementById('tab-quiz');
+
+let mode = 'study';
+let flashIndex = 0;
+let flashDeck = shuffle(TERMS);
+
+let quizQuestions = [];
+let quizIndex = 0;
+let quizScore = 0;
+let quizStreak = 0;
+let quizMissed = [];
+const QUIZ_LEN = 14;
+
+tabStudy.addEventListener('click', () => { mode = 'study'; setActiveTab(); renderStudy(); });
+tabQuiz.addEventListener('click', () => { mode = 'quiz'; setActiveTab(); startQuiz(); });
+
+function setActiveTab() {
+  tabStudy.classList.toggle('active', mode === 'study');
+  tabQuiz.classList.toggle('active', mode === 'quiz');
+  foothint.textContent = mode === 'study'
+    ? 'Tap a card to flip it. Use the arrows to move through the deck.'
+    : 'Wrong picks just gray out — keep trying until you land on the right one.';
+}
+
+/* ============ STUDY MODE ============ */
+
+function renderStudy() {
+  const t = flashDeck[flashIndex];
+  stage.innerHTML = `
+    <div class="statbar">
+      <span>Flashcards</span>
+      <span class="counter-top">${flashIndex + 1} / ${flashDeck.length}</span>
+    </div>
+    <div class="card3d">
+      <div class="card-inner" id="cardInner">
+        <div class="card-face front">
+          <div class="num">${flashIndex + 1} of ${flashDeck.length}</div>
+          <div class="term">${t.name}</div>
+          <div class="hint">tap to reveal</div>
+        </div>
+        <div class="card-face back">
+          <dl>
+            <dt>Clue</dt><dd>${t.clue}</dd>
+            <dt>Origin</dt><dd>${t.origin}</dd>
+            <dt>Date / Period</dt><dd>${t.date}</dd>
+            <dt>Also know</dt><dd>${t.extra}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <div class="deck-controls">
+      <div class="side-btns">
+        <button id="prevBtn">← Prev</button>
+        <button id="nextBtn">Next →</button>
+      </div>
+      <button id="shuffleBtn">Shuffle deck</button>
+    </div>
+  `;
+  const inner = document.getElementById('cardInner');
+  inner.addEventListener('click', () => inner.classList.toggle('flipped'));
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    flashIndex = (flashIndex - 1 + flashDeck.length) % flashDeck.length;
+    renderStudy();
+  });
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    flashIndex = (flashIndex + 1) % flashDeck.length;
+    renderStudy();
+  });
+  document.getElementById('shuffleBtn').addEventListener('click', () => {
+    flashDeck = shuffle(TERMS);
+    flashIndex = 0;
+    renderStudy();
+  });
+}
+
+/* ============ QUIZ MODE ============ */
+
+function startQuiz() {
+  const pool = shuffle(buildPool()).slice(0, QUIZ_LEN);
+  quizQuestions = pool.map(makeQuestion);
+  quizIndex = 0;
+  quizScore = 0;
+  quizStreak = 0;
+  quizMissed = [];
+  renderQuiz();
+}
+
+function renderQuiz() {
+  if (quizIndex >= quizQuestions.length) {
+    renderResults();
+    return;
+  }
+  const q = quizQuestions[quizIndex];
+  const dotsHtml = quizQuestions.map((_, i) => {
+    const cls = i < quizIndex ? 'done' : (i === quizIndex ? 'now' : '');
+    return `<i class="${cls}"></i>`;
+  }).join('');
+
+  stage.innerHTML = `
+    <div class="statbar">
+      <span class="score">Score ${quizScore} · Streak ${quizStreak}</span>
+      <div class="dots">${dotsHtml}</div>
+    </div>
+    <div class="prompt-label">${q.label}</div>
+    <p class="prompt">${q.prompt}</p>
+    <div class="options" id="optsWrap">
+      ${q.options.map(o => `<button class="opt" data-val="${escapeAttr(o)}">${o}</button>`).join('')}
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextQBtn">${quizIndex === quizQuestions.length - 1 ? 'See results' : 'Next question'}</button>
+  `;
+
+  const optsWrap = document.getElementById('optsWrap');
+  const feedback = document.getElementById('feedback');
+  const nextBtn = document.getElementById('nextQBtn');
+  let attempts = 0;
+
+  optsWrap.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      const chosen = btn.dataset.val;
+      const correct = chosen === q.answer;
+
+      if (correct) {
+        btn.classList.add('correct');
+        optsWrap.querySelectorAll('.opt').forEach(b => b.disabled = true);
+        quizScore++;
+        if (attempts === 0) {
+          quizStreak++;
+          feedback.innerHTML = `<strong>Right first try.</strong> ${q.note}`;
+        } else {
+          quizStreak = 0;
+          quizMissed.push(q);
+          feedback.innerHTML = `<strong>Got there.</strong> ${q.note}`;
+        }
+        nextBtn.classList.add('show');
+      } else {
+        attempts++;
+        btn.classList.add('wrong');
+        btn.disabled = true;
+        quizStreak = 0;
+        feedback.innerHTML = `<strong>Not quite — try again.</strong>`;
+      }
+    });
+  });
+
+  nextBtn.addEventListener('click', () => {
+    quizIndex++;
+    renderQuiz();
+  });
+}
+
+function renderResults() {
+  const pct = Math.round((quizScore / quizQuestions.length) * 100);
+  const missedHtml = quizMissed.length
+    ? quizMissed.map(m => `<div class="missed-item"><strong>${m.answer}</strong> — ${m.note}</div>`).join('')
+    : `<div class="missed-item">Nothing missed — clean sweep.</div>`;
+
+  stage.innerHTML = `
+    <div class="results">
+      <h2>Round complete</h2>
+      <div class="big-score">${quizScore} / ${quizQuestions.length}</div>
+      <div style="color: var(--text-lo); font-size: 13.5px;">${pct}% correct</div>
+      <button class="primary-btn show" id="againBtn">Play again</button>
+      <div class="missed">
+        <div class="prompt-label">To review</div>
+        ${missedHtml}
+      </div>
+    </div>
+  `;
+  document.getElementById('againBtn').addEventListener('click', startQuiz);
+}
+
+function escapeAttr(s) {
+  return s.replace(/"/g, '&quot;');
+}
+
+/* ============ INIT ============ */
+renderStudy();
+</script>
+</body>
+</html>
